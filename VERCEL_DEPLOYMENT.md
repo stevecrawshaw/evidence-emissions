@@ -6,7 +6,6 @@ This guide explains how to deploy this Evidence app to Vercel.
 
 - Vercel account (already set up ✓)
 - Git repository connected to Vercel
-- MotherDuck token (if using MotherDuck data source)
 
 ## Deployment Steps
 
@@ -26,34 +25,11 @@ The `vercel.json` file already contains the correct settings:
 
 Vercel should automatically pick these up from the config file.
 
-### 3. Set Environment Variables
+### 3. Environment Variables
 
-#### Method 1: Using Evidence Dev Server (Recommended)
-
-1. Run the Evidence dev server locally:
-   ```bash
-   npm run dev
-   ```
-
-2. Navigate to [http://localhost:3000/settings#deploy](http://localhost:3000/settings#deploy)
-
-3. Click the **Copy All** button to copy all environment variables
-
-4. In Vercel:
-   - Go to your project → Settings → Environment Variables
-   - Paste the copied variables
-
-#### Method 2: Manual Configuration
-
-If you have a MotherDuck connection, you'll need to set:
-
-```
-EVIDENCE_SOURCE__motherduck__token=<your-motherduck-token>
-```
-
-Replace `<your-motherduck-token>` with your actual MotherDuck authentication token.
-
-**Note**: The ODS source is a JavaScript source and doesn't require additional credentials.
+**Note**: Both data sources (`emissions` and `ods`) are JavaScript sources that fetch
+directly from the West of England open data portal at build time and require no
+credentials or environment variables.
 
 ### 4. Deploy
 

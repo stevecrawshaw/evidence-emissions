@@ -1,0 +1,6 @@
+type: javascript
+name: emissions
+options: {}
+# Advanced Options, you probably don't want to change this
+buildOptions:
+  batchSize: 1000000

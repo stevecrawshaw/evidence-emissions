@@ -66,4 +66,3 @@ plugins:
     # You can add additional datasources here by adding npm packages.
     # Make to also add them to `package.json`.
     "@evidence-dev/source-javascript": { }
-    "@evidence-dev/motherduck": { }

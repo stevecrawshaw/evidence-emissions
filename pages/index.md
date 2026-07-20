@@ -10,11 +10,6 @@ logo: "https://s3-eu-central-1.amazonaws.com/aws-ec2-eu-central-1-opendatasoft-s
 ---
 <!-- Queries     -->
 
-```sql epc
-SELECT * FROM ods LIMIT 10
-
-```
-
 ```sql emissions_ns
 SELECT *
 FROM emissions
@@ -24,17 +19,24 @@ ORDER BY local_authority
 ```
 
 ```sql per_cap_ns
-SELECT 
-  SUM(em.grand_total) / SUM(em.population_000s_mid_year_estimate) per_cap
-  ,em.calendar_year
-  -- ,em.local_authority
-  -- ,em.local_authority_code
-  ,ca.cauthnm
-FROM emissions em
-INNER JOIN ca_la_tbl ca
-ON em.local_authority_code = ca.ladcd
-WHERE  (${inputs.include_ns} = TRUE OR ca.ladcd != 'E06000024')
-GROUP BY ALL
+WITH la_year_pop AS (
+  SELECT DISTINCT local_authority_code, calendar_year, cauthnm, population_000s
+  FROM ${emissions_ns}
+)
+SELECT
+  tot.total_emissions / pop.total_population per_cap
+  ,tot.calendar_year
+  ,tot.cauthnm
+FROM (
+  SELECT calendar_year, cauthnm, SUM(emissions_kt_co2e) total_emissions
+  FROM ${emissions_ns}
+  GROUP BY ALL
+) tot
+INNER JOIN (
+  SELECT calendar_year, cauthnm, SUM(population_000s) total_population
+  FROM la_year_pop
+  GROUP BY ALL
+) pop USING (calendar_year, cauthnm)
 ORDER BY per_cap
 ```
 
@@ -46,8 +48,6 @@ SELECT calendar_year, cauthnm, per_cap "Per capita emissions (TCO2e pp/pa)" FROM
   SELECT
       calendar_year, (calendar_year::INTEGER || '-01-01')::DATE "date", cauthnm, sum(emissions_kt_co2e) total_emissions_kt_co2e 
   FROM ${emissions_ns}
-  WHERE 
-    total_bool
   GROUP BY cauthnm, calendar_year, "date"
 ```
 
@@ -56,7 +56,7 @@ SELECT calendar_year, cauthnm, per_cap "Per capita emissions (TCO2e pp/pa)" FROM
   select
       calendar_year, local_authority, sum(emissions_kt_co2e) total_emissions_kt_co2e 
   from ${emissions_ns}
-  where calendar_year > ${first_year} AND cauthnm = '${inputs.cauth_1.value}' AND total_bool
+  where calendar_year > ${first_year} AND cauthnm = '${inputs.cauth_1.value}'
   group by calendar_year, local_authority
   -- the inputs need to be quoted when they are a string otherwise sql corrupted
 ```
@@ -66,8 +66,7 @@ SELECT calendar_year, cauthnm, per_cap "Per capita emissions (TCO2e pp/pa)" FROM
 
 SELECT cauthnm, SUM(emissions_kt_co2e) s_emissions, sector FROM ${emissions_ns} 
 WHERE calendar_year = ${last_year} AND
-  sector != 'lulucf_net_emissions' AND 
-  total_bool
+  sector != 'LULUCF'
 GROUP BY ALL
 
 ```
@@ -75,7 +74,7 @@ GROUP BY ALL
 ```sql sectors
 
 SELECT cauthnm, SUM(emissions_kt_co2e) s_emissions, sector FROM ${emissions_ns} 
-WHERE calendar_year = ${last_year} AND total_bool
+WHERE calendar_year = ${last_year}
 GROUP BY ALL
 
 ```
@@ -109,19 +108,17 @@ USING ARRAY_AGG({'year': calendar_year, 'emissions_kt_co2e': total_emissions}) A
 ```
 
 ```sql sparklines_totals
-SELECT cauthnm, COLUMNS('_total') FROM ${pivot_sparklines}
+SELECT cauthnm, "Commercial_emissions_year", "Public Sector_emissions_year", "Domestic_emissions_year", "Industry_emissions_year" FROM ${pivot_sparklines}
 ```
 
 ```sql sector_totals
 SELECT cauthnm,
       calendar_year,
-      split_part(sector, '_tot', 1).replace('_', ' ').regexp_replace('^.', substring(sector, 1, 1).upper()) Sector,
+      sector AS Sector,
       SUM(emissions_kt_co2e) AS total_emissions
 FROM ${emissions_ns}
 WHERE 
   calendar_year > ${first_year} 
-  AND 
-  total_bool
   AND
   cauthnm = '${inputs.cauth_1.value}'
 GROUP BY ALL
@@ -138,7 +135,7 @@ GROUP BY ALL
 
 ```sql sector_recent
 SELECT cauthnm,
-            split_part(sector, '_tot', 1).replace('_', ' ').regexp_replace('^.', substring(sector, 1, 1).upper()) Sector,
+      sector AS Sector,
       SUM(s_emissions) AS total_emissions
 FROM ${sectors}
 GROUP BY ALL
@@ -177,12 +174,11 @@ Data were sourced from the <Link
     newTab=true
 />
 <br>
-For full reproducibility and transparency, data have been processed and stored on the <Link 
-    url="https://app.motherduck.com/"
-    label="Motherduck"
+For full reproducibility and transparency, data are queried live at build time from the <Link 
+    url="https://opendata.westofengland-ca.gov.uk/explore/dataset/ca_la_ghg_emissions_sub_sector_ods_vw/"
+    label="West of England open data portal"
     newTab=true 
-/> cloud database platform. If you have a motherduck account you can access the database with this code:
-<blockquote class="bg-zinc-200"> ATTACH 'md:_share/mca_data/f114fbc4-b46f-4dc4-b445-f039f9121946'; </blockquote>
+/>.
 
 The <Link
     url="https://evidence.dev/"
@@ -233,28 +229,28 @@ data={sparklines_totals}
 rows=all
 title="Trends by aggregated sector">
 <Column id=cauthnm title="Combined Authority"/>
-<Column id=commercial_total_emissions_year
+<Column id="Commercial_emissions_year"
         title="Commercial"
         contentType=sparkarea
         sparkX=year
         sparkY=emissions_kt_co2e
         sparkColor=#590075/>
 
-<Column id=public_sector_total_emissions_year
+<Column id="Public Sector_emissions_year"
         title="Public Sector"
         contentType=sparkarea
         sparkX=year
         sparkY=emissions_kt_co2e
         sparkColor=#1D4F2B
         />
-<Column id=domestic_total_emissions_year
+<Column id="Domestic_emissions_year"
         title="Domestic"
         contentType=sparkarea
         sparkX=year
         sparkY=emissions_kt_co2e
         sparkColor=#40A832
         />
-<Column id=industry_total_emissions_year
+<Column id="Industry_emissions_year"
         title="Industrial"
         contentType=sparkarea
         sparkX=year
