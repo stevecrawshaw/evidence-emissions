@@ -20,8 +20,13 @@ ORDER BY local_authority
 
 ```sql per_cap_ns
 WITH la_year_pop AS (
-  SELECT DISTINCT local_authority_code, calendar_year, cauthnm, population_000s
+  -- AVG(), not DISTINCT: the ODS source's server-side AVG(midyear_population_thousands)
+  -- returns tiny floating-point variations across sector rows for the same LA-year
+  -- (e.g. 200.028 vs 200.02800000000002), so DISTINCT fails to collapse them and
+  -- population gets summed multiple times per LA. Aggregating per LA first avoids that.
+  SELECT local_authority_code, calendar_year, cauthnm, AVG(population_000s) population_000s
   FROM ${emissions_ns}
+  GROUP BY local_authority_code, calendar_year, cauthnm
 )
 SELECT
   tot.total_emissions / pop.total_population per_cap
