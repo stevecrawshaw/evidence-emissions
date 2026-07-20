@@ -12,15 +12,17 @@ const fetchData = async () => {
 
     // Server-side ODSQL aggregation: collapse sub-sector + greenhouse-gas rows down
     // to one row per (local authority, year, sector). 'Large Industrial Installations'
-    // is a memo sub-sector already counted within Industry's other sub-sectors, so it
-    // is excluded here to avoid double-counting (mirrors the old total_bool flag).
+    // is NOT a duplicate of Industry's other sub-sectors, despite appearances -- per
+    // DESNZ's technical report, the largest gas/electricity consumers are deliberately
+    // stripped out of Industry Gas/Electricity/'Other' for non-disclosure reasons and
+    // their emissions reported separately under this sub-sector instead. Excluding it
+    // (as this source previously did) undercounts Industry emissions by up to ~15% for
+    // LAs with large industrial sites (e.g. South Gloucestershire), so it stays included.
     var select = "local_authority_code,local_authority,cauthcd,cauthnm,date_format(calendar_year,'yyyy') as calendar_year,la_ghg_sector as sector,sum(territorial_emissions_kt_co2e) as emissions_kt_co2e,avg(midyear_population_thousands) as population_000s";
-    var where = "la_ghg_sub_sector != 'Large Industrial Installations'";
     var groupBy = "local_authority_code,local_authority,cauthcd,cauthnm,calendar_year,la_ghg_sector";
 
     var params = new URLSearchParams();
     params.set('select', select);
-    params.set('where', where);
     params.set('group_by', groupBy);
 
     var url = baseUrl + '?' + params.toString();
