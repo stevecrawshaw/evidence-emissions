@@ -54,7 +54,7 @@ Enable password protection via Vercel's paid plan ($150/month minimum):
 
 ### Build Fails
 - Check that all environment variables are correctly set
-- Verify Node version compatibility (requires Node >= 18.0.0)
+- Verify Node version compatibility (requires Node 24.x, as set in `package.json` `engines`)
 - Check build logs in Vercel dashboard for specific errors
 
 ### Data Not Loading
